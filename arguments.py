@@ -16,7 +16,6 @@ import urllib2
 from bs4 import BeautifulSoup
 import MySQLdb
 import re
-import json
 import feedparser
 import multiprocessing
 from arguments_log import argumentLog
