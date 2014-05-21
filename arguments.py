@@ -273,7 +273,7 @@ def scrape_1st():
 		
 def scrape_3rd():
 	print '-> Updating 3rd Cir. data'
-	court_id = utils.getCourt("3rd Cir.")
+	court_id = utils.getCourt("3d Cir.")
 	URL = 'http://www2.ca3.uscourts.gov/oralargument/OralArguments.xml'
 	TITLEPARSE = re.compile('^([\d-]{4,})', re.IGNORECASE)
 	try:
