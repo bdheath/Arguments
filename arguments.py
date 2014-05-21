@@ -5,10 +5,8 @@
 #
 # TODO
 # - Add readme
-# - Enhance error handling
-# - Add error logging, notifications
 # - Extract 3rd Cir. case metadata
-# - Post to Twitter
+# - Update argument class so new/updated cases can be shared, noticed
 
 import sys
 from dateutil.parser import parse
@@ -21,12 +19,13 @@ import re
 import json
 import feedparser
 import multiprocessing
-from argument_scrape_log import argumentLog
+from arguments_log import argumentLog
 
 # IMPORT dbaccess, which has default MySQL connection settings
 sys.path.append('/')
 from dbaccess import dbinfo
 
+# SETTINGS 
 # IMPORTANT CONFIGURATION SETTINGS HERE
 dbhost = dbinfo.dbhost
 dbuser = dbinfo.dbuser
@@ -154,7 +153,7 @@ class argument:
 				sql = """ INSERT INTO """ + dbname + """.""" + dbtable_courts \
 					+ """ (short_name, bluebook_name, proper_name) 
 							VALUES(%s, %s, %s) """
-				from arguments_scrape_courts import courts_list
+				from arguments_courts import courts_list
 				
 				db.executemany(sql, (courts_list))
 			db.execute(""" SHOW TABLES FROM """ + dbname + """ LIKE %s """, (dbtable_urls, ))
