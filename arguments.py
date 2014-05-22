@@ -33,7 +33,7 @@ dbname = 'court'
 dbtable = 'arguments'
 dbtable_courts = dbtable + '_courts'
 dbtable_urls = dbtable + '_urls'
-multiprocess = True
+multiprocess = False
 maxprocesses = 2
 
 db = MySQLdb.connect(dbhost, dbuser, dbpass, dbname).cursor(MySQLdb.cursors.DictCursor)
@@ -275,19 +275,29 @@ def scrape_3rd():
 	court_id = utils.getCourt("3d Cir.")
 	URL = 'http://www2.ca3.uscourts.gov/oralargument/OralArguments.xml'
 	TITLEPARSE = re.compile('^([\d-]{4,})', re.IGNORECASE)
+	MEDIAMEAT = re.compile('audio/[\d\-\&]{4,}(.*?).wma', re.IGNORECASE);
 	try:
 		feed = feedparser.parse(URL)
 		for item in feed.entries:
 			media_url = item.link.replace(' ', '%20')
 			if utils.checkValidMediaUrl(media_url):
 				if re.search(TITLEPARSE, item.title.replace('_','-')):
+					caption = ''
 					docket_no = re.search(TITLEPARSE, item.title.replace('_','-')).group(1)
 					argued = utils.convertDate(item.description, 'mdy')
-					arg = argument(docket_no = docket_no, court_id = court_id, media_url = media_url,
-						argued = argued)
+					# SOMETHING IS WRONG IN YOUR RE HERE
+					if re.search(MEDIAMEAT, media_url):
+						caption = re.search(MEDIAMEAT, media_url).group(1)
+						caption = re.sub('([a-z])([A-Z])', '\g<1> \g<2>', caption)
+						caption = caption.replace('_', ' ').replace('%20',' ')
+						caption = re.sub(r'v ', ' v. ', caption)
+					
+					arg = argument(docket_no = docket_no, court_id = court_id, media_url = 
+						media_url, argued = argued, caption = caption)
 					if not arg.exists():
 						arg.write()
 	except:
+		print 'errror'
 		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)	
 	return
