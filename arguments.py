@@ -1,12 +1,11 @@
 # ORAL ARGUMENT SCRAPER
 # brad.heath@gmail.com, @bradheath
 # Script to scrape and store metadata on U.S. Court of Appeals oral arguments
-# Scrapes 1st, 3rd, 4th, 5th, 7th, 8th, 9th, D.C. and Fed. Circuits
+# Scrapes 1st, 3rd, 4th, 5th, 7th, 8th, 9th, D.C. and Fed. Circuits and SCOTUS
 #
 # TODO
-# - Add readme
-# - Extract 3rd Cir. case metadata
-# - Update argument class so new/updated cases can be shared, noticed
+# - Update argument class so new/updated cases can be shared, noticed upon create
+#   Plug this to platform-specific APIs
 
 import sys
 from dateutil.parser import parse
@@ -34,9 +33,9 @@ dbtable = 'arguments'
 dbtable_courts = dbtable + '_courts'
 dbtable_urls = dbtable + '_urls'
 multiprocess = False
-maxprocesses = 2
+maxprocesses = 4
 
-db = MySQLdb.connect(dbhost, dbuser, dbpass, dbname).cursor(MySQLdb.cursors.DictCursor)
+db = MySQLdb.connect(dbhost, dbuser, dbpass, dbname, charset = 'UTF8').cursor(MySQLdb.cursors.DictCursor)
 log = argumentLog()
 
 class argument:
@@ -133,7 +132,7 @@ class argument:
 							FULLTEXT KEY counsel_ftidx(counsel),
 							FULLTEXT KEY judges_ftidx(judges),
 							FULLTEXT KEY all_ftidx(caption,issues,counsel,judges)
-						) ENGINE=MyISAM """
+						) ENGINE=MyISAM, CHARACTER SET=UTF8"""
 				db.execute(sql)
 			db.execute(""" SHOW TABLES FROM """ + dbname + """ LIKE %s """, 
 				(dbtable_courts, ))
@@ -444,13 +443,13 @@ def scrape_8th():
 	print "-> Updating 8th Cir. data"
 	court_id = utils.getCourt("8th Cir.")
 	URL = 'http://8cc-www.ca8.uscourts.gov/circ8rss.xml'
-	TITLEPARSE = re.compile('^([\d-]{4,}:(.*?))$', re.IGNORECASE)
+	TITLEPARSE = re.compile('^([\d-]{4,}):(.*?)$', re.IGNORECASE)
 	
 	try:
 		feed = feedparser.parse(URL)
 		for item in feed.entries:
 			if utils.checkValidMediaUrl(item.guid):
-				docket_no = re.search(TITLEPARSE, item.title).group(1)
+				docket_no = re.search(TITLEPARSE, item.title).group(1).strip()
 				caption = re.search(TITLEPARSE, item.title).group(2).strip()
 				media_url = item.guid
 				media_type = 'mp3'
@@ -529,6 +528,41 @@ def scrape_dc():
 	return
 	
 def scrape_scotus():
+	print '-> Updating Sup. Ct. data'
+	court_id = utils.getCourt('Sup. Ct.')
+	URL = 'http://www.supremecourt.gov/oral_arguments/argument_audio.aspx'
+	DTARG = re.compile('Date Argued', re.IGNORECASE)
+	TITLEPARSE = re.compile("([\d-]{3,})\. (.*?)$", re.IGNORECASE)
+	MEDIABASE = 'http://www.supremecourt.gov/media/audio/mp3files/'
+	
+	try:
+		html = urllib2.urlopen(URL).read()
+		s = BeautifulSoup(html)
+		
+		for table in s.find_all('table', { 'class' : 'datatables' }):
+			# Parse a results table
+			i = 0
+			for tr in table.find_all('tr'):
+				if i > 1:
+					td = tr.find_all('td')
+					if not re.search(DTARG, td[1].text):
+						argued = utils.convertDate(td[1].text.strip(), 'mdy')
+						if re.search(TITLEPARSE, td[0].text):
+							caption = re.search(TITLEPARSE, td[0].text).group(2).encode('ascii','ignore')
+							docket_no = re.search(TITLEPARSE, td[0].text).group(1).encode('ascii','ignore')
+							media_type = 'mp3'
+							media_url = MEDIABASE + docket_no + '.mp3'
+							if utils.checkValidMediaUrl(media_url):
+								arg = argument( court_id = court_id, caption = caption,
+									docket_no = docket_no, media_type = media_type,
+									media_url = media_url, argued = argued)
+								if not arg.exists():
+									arg.write()
+				i += 1
+	
+	except:
+		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		log.log('ERROR', err)	
 	return
 	
 def scrape_fed():
@@ -568,7 +602,7 @@ if __name__ == '__main__':
 
 	# Now execute the scrapes
 	scrapes = [scrape_1st, scrape_3rd, scrape_4th, scrape_5th, scrape_6th,
-		scrape_7th, scrape_8th, scrape_9th, scrape_dc, scrape_fed, ]
+		scrape_7th, scrape_8th, scrape_9th, scrape_dc, scrape_fed, scrape_scotus,]
 	
 	if multiprocess:
 		pool = multiprocessing.Pool(processes=maxprocesses)
