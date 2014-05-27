@@ -6,6 +6,8 @@
 # TODO
 # - Update argument class so new/updated cases can be shared, noticed upon create
 #   Plug this to platform-specific APIs
+# - Enhance logging
+# - Attempt to standardize/modularize more of the scrape code
 
 import sys
 from dateutil.parser import parse
@@ -18,25 +20,20 @@ import re
 import feedparser
 import multiprocessing
 from arguments_log import argumentLog
+from pydub import AudioSegment
+import os
 
 # IMPORT dbaccess, which has default MySQL connection settings
-sys.path.append('/')
-from dbaccess import dbinfo
+from argument_settings import argumentSettings
+settings = argumentSettings()
 
-# SETTINGS 
-# IMPORTANT CONFIGURATION SETTINGS HERE
-dbhost = dbinfo.dbhost
-dbuser = dbinfo.dbuser
-dbpass = dbinfo.dbpass
-dbname = 'court'
-dbtable = 'arguments'
-dbtable_courts = dbtable + '_courts'
-dbtable_urls = dbtable + '_urls'
-multiprocess = False
-maxprocesses = 4
 
-db = MySQLdb.connect(dbhost, dbuser, dbpass, dbname, charset = 'UTF8').cursor(MySQLdb.cursors.DictCursor)
+db = MySQLdb.connect(settings.dbhost, settings.dbuser, settings.dbpass, settings.dbname, charset = 'UTF8').cursor(MySQLdb.cursors.DictCursor)
 log = argumentLog()
+
+if settings.FFMpegLocation != '':
+	AudioSegment.ffmpeg = settings.FFMpegLocation
+
 
 class argument:
 
@@ -56,7 +53,7 @@ class argument:
 
 	def __init__(self, docket_no = '', caption = '', case_url = '', \
 		media_url = '', media_type = '', media_size = 0, counsel = '', \
-		issues='', judges = '', argued='', duration = 0, court_id = 0):
+		issues='', judges = '', argued='', duration = 0, court_id = 0, uid=None):
 		self._docket_no = docket_no
 		self._caption = caption
 		self._case_url = case_url
@@ -70,26 +67,49 @@ class argument:
 		self._duration = duration
 		self._court_id = court_id
 		self.checkDB()
-		self._uid = str(self._court_id) + '__' + self._docket_no.replace(' ','') \
-			+ '__' + str(self._argued).replace(' ','_')
+		if uid == None:
+			self._uid = str(self._court_id) + '__' + self._docket_no.replace(' ','') \
+				+ '__' + str(self._argued).replace(' ','_')
 		return
 		
 	def exists(self):
-		db.execute(""" SELECT COUNT(*) AS c FROM """ + dbname + """.""" \
-			+ dbtable + """ WHERE uid = %s """, (self._uid, ))
+		db.execute(""" SELECT COUNT(*) AS c FROM """ + settings.dbname + """.""" \
+			+ settings.dbtable + """ WHERE uid = %s """, (self._uid, ))
 		if db.fetchone()['c'] == 0:
 			return False
 		else:
 			return True
+
+	def updateMediaUrl(self, newUrl):
+		self._media_url = newUrl
+		self._media_type = newUrl[-3:].lower()
+		db.execute(""" UPDATE """ + settings.dbname + """.""" + settings.dbtable + """
+			SET media_type = %s, media_url = %s WHERE uid = %s """,
+			(self._media_type, self._media_url, self._uid))
+		return
+		
+	def load(self, uid):
+		db.execute(""" SELECT * FROM """ + settings.dbname + """.""" + settings.dbtable + """
+			WHERE uid = %s """, (uid, ))
+		h = db.fetchone()
+		self._uid = h['uid']
+		self._court_id = h['court_id']
+		self._media_url = h['media_url']
+		self._media_type = h['media_type']
 		
 	def write(self):
 		if self._court_id == 0:
 			print '  # EXCEPTION: You cannot write to an unspecified court '
 		else:
+			if settings.downloadandconvert == True:
+				filename = utils.localFileName(prefix=self._court_id, url=self._media_url)
+				f = utils.convertFile(self._media_url, filename)
+			if self._media_type == '':
+				self._media_type = self._media_url[-3:].lower()
 			u = argumentUtils()
 			if self._media_size == 0:
 				self._media_size = u.getRemoteSize(self._media_url)
-			db.execute(""" REPLACE INTO """ + dbname + """.""" + dbtable + """
+			db.execute(""" REPLACE INTO """ + settings.dbname + """.""" + settings.dbtable + """
 					(uid, docket_no, caption, case_url, media_url, media_type, media_size, counsel, issues, judges, argued, duration, court_id, added) 
 					VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()) """,
 					(self._uid, self._docket_no, self._caption, self._case_url,
@@ -99,11 +119,11 @@ class argument:
 	
 	def checkDB(self):
 		if str(type(db)) == "<class 'MySQLdb.cursors.DictCursor'>":
-			db.execute(""" SHOW TABLES FROM """ + dbname + """ LIKE %s """, 
-				(dbtable, ))
+			db.execute(""" SHOW TABLES FROM """ + settings.dbname + """ LIKE %s """, 
+				(settings.dbtable, ))
 			h = db.fetchall()
 			if len(h) == 0:
-				sql = """ CREATE TABLE IF NOT EXISTS """ + dbname + "." + dbtable \
+				sql = """ CREATE TABLE IF NOT EXISTS """ + settings.dbname + "." + settings.dbtable \
 					+ """ (
 							uid VARCHAR(255) PRIMARY KEY,
 							court_id INT,
@@ -134,11 +154,11 @@ class argument:
 							FULLTEXT KEY all_ftidx(caption,issues,counsel,judges)
 						) ENGINE=MyISAM, CHARACTER SET=UTF8"""
 				db.execute(sql)
-			db.execute(""" SHOW TABLES FROM """ + dbname + """ LIKE %s """, 
-				(dbtable_courts, ))
+			db.execute(""" SHOW TABLES FROM """ + settings.dbname + """ LIKE %s """, 
+				(settings.dbtable_courts, ))
 			h = db.fetchall()
 			if len(h) == 0:
-				sql = """ CREATE TABLE IF NOT EXISTS """ + dbname + """.""" + dbtable_courts \
+				sql = """ CREATE TABLE IF NOT EXISTS """ + settings.dbname + """.""" + settings.dbtable_courts \
 					+ """ (
 							court_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 							short_name VARCHAR(255),
@@ -148,16 +168,16 @@ class argument:
 							KEY bluebook_name_idx(bluebook_name)
 						) ENGINE=MyISAM """
 				db.execute(sql)
-				sql = """ INSERT INTO """ + dbname + """.""" + dbtable_courts \
+				sql = """ INSERT INTO """ + settings.dbname + """.""" + settings.dbtable_courts \
 					+ """ (short_name, bluebook_name, proper_name) 
 							VALUES(%s, %s, %s) """
 				from arguments_courts import courts_list
 				
 				db.executemany(sql, (courts_list))
-			db.execute(""" SHOW TABLES FROM """ + dbname + """ LIKE %s """, (dbtable_urls, ))
+			db.execute(""" SHOW TABLES FROM """ + settings.dbname + """ LIKE %s """, (settings.dbtable_urls, ))
 			h = db.fetchall()
 			if len(h) == 0:
-				sql = """ CREATE TABLE IF NOT EXISTS """ + dbname + """.""" + dbtable_urls \
+				sql = """ CREATE TABLE IF NOT EXISTS """ + settings.dbname + """.""" + settings.dbtable_urls \
 					+ """(
 							url VARCHAR(255) PRIMARY KEY,
 							modified TIMESTAMP,
@@ -167,6 +187,21 @@ class argument:
 		return
 
 class argumentUtils:
+
+	def convertMostRecent(self):
+		db.execute(""" SELECT uid, court_id, media_url FROM """ + settings.dbname + """.""" + settings.dbtable + """
+					WHERE media_type <> 'mp3' 
+					AND argued >= DATE_ADD(CURRENT_DATE(), INTERVAL -180 DAY)
+					ORDER BY argued DESC, modified DESC LIMIT %s""", 
+					(settings.convertHowmany,))
+		h = db.fetchall()
+		if len(h) > 0:
+			for case in h:
+				newurl = self.convertFile(case['media_url'], self.localFileName(case['media_url'], prefix=case['court_id']))
+				if newurl != '':
+					arg = argument()
+					arg.load(case['uid'])
+					arg.updateMediaUrl(newurl)
 	
 	def convertDate(self, date, format):
 		if format == 'rss':
@@ -183,7 +218,7 @@ class argumentUtils:
 		valid = False
 		
 		# First see if we've already checked this
-		db.execute(""" SELECT r FROM """ + dbname + """.""" + dbtable_urls + """ WHERE
+		db.execute(""" SELECT r FROM """ + settings.dbname + """.""" + settings.dbtable_urls + """ WHERE
 			url = %s """, (url, ))
 		h = db.fetchall()
 		if len(h) == 0:
@@ -199,24 +234,63 @@ class argumentUtils:
 				r = 1
 			else:
 				r = 0
-			db.execute(""" REPLACE INTO """ + dbname + """.""" + dbtable_urls + """
+			db.execute(""" REPLACE INTO """ + settings.dbname + """.""" + settings.dbtable_urls + """
 				(url, r) VALUES(%s, %s)""", (url, r, ))
 		else:
 			if h[0]['r'] == 1:
 				valid = True
 		return valid
-		
+	
+	def localFileName(self, url, prefix = ''): 
+		FILESYNTAX = re.compile(r'/(\d.*?)$', re.IGNORECASE)
+		if prefix != '':
+			prefix = str(prefix) + '_'
+		ender = re.search(FILESYNTAX, url).group(1)
+		filename = re.sub('[\. ]', '_', prefix) + re.sub(r'[\(\)\.\,\& -\%\*\?\/]','_', ender)
+		return filename
+	
+	def convertFile(self, url, local, verbose=True):
+		try:
+			if verbose:
+				print '   (downloading ' + local + ')'
+			format = url[-3:]
+			localMp3 = local[:-4] + '.mp3'
+			if settings.localTemp[-1] != '/':
+				settings.localTemp += '/'
+			if settings.localPublish[-1] != '/':
+				settings.localPublish += '/'
+			localTempFile = settings.localTemp + local
+			localMp3File = settings.localPublish + localMp3
+			localMp3URL = settings.localPublishRelative + localMp3
+			if format != 'mp3':
+				if utils.downloadFile(url, localTempFile):
+					if settings.FFMpegLocation != '':			
+						AudioSegment.ffmpeg = settings.FFMpegLocation
+					AudioSegment.from_file(localTempFile).export(localMp3File, format='mp3')
+					# THEN add an updated media URL and media type
+					# THEN add a cleanup routine to delete copies that are not in top x00
+					# THEN add a routine to do this update for already-stored media
+					os.remove(localTempFile)
+		except:
+			err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+			log.log('ERROR', err)
+			localMp3URL = ''
+		return localMp3URL
+	
 	def downloadFile(self, url, local):
-		request = urllib2.Request(url)
-		urlfile = urllib2.urlopen(request)
-		chunk = 4096 * 2
-		f = open(local, "wb")
-		while 1:
-			data = urlfile.read(chunk)
-			if not data:
-				break
-			f.write(data)
-		return
+		try:
+			request = urllib2.Request(url)
+			urlfile = urllib2.urlopen(request)
+			chunk = 4096 * 2
+			f = open(local, "wb")
+			while 1:
+				data = urlfile.read(chunk)
+				if not data:
+					break
+				f.write(data)
+			return True
+		except:
+			return False
 
 	def getFileDetails(self, url):
 		MP3 = re.compile('mp3$', re.IGNORECASE)
@@ -241,10 +315,12 @@ class argumentUtils:
 		return remoteSize
 		
 	def getCourt(self, bluebook):
-		db.execute(""" SELECT court_id FROM """ + dbname + """.""" + dbtable_courts + """
+		db.execute(""" SELECT court_id FROM """ + settings.dbname + """.""" + settings.dbtable_courts + """
 					WHERE bluebook_name = %s """, (bluebook, ))
 		return db.fetchone()['court_id']
 	
+
+# HERE ARE THE ROUTINES THAT SCRAPE INDIVIDUAL COURT SITES
 
 def scrape_1st():
 	print '-> Updating 1st Cir. data'
@@ -296,7 +372,6 @@ def scrape_3rd():
 					if not arg.exists():
 						arg.write()
 	except:
-		print 'errror'
 		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)	
 	return
@@ -515,6 +590,7 @@ def scrape_dc():
 				docket_no = re.search(TITLEPARSE, item.title).group(1)
 				caption = re.search(TITLEPARSE, item.title).group(2)
 				media_url = item.link
+				media_type = item.link[-3:].lower()
 				#file = getFileDetails(item.link)
 				argued = utils.convertDate(item.published, 'rss')
 				arg = argument(docket_no = docket_no, caption = caption, media_url = media_url,
@@ -604,16 +680,16 @@ if __name__ == '__main__':
 	scrapes = [scrape_1st, scrape_3rd, scrape_4th, scrape_5th, scrape_6th,
 		scrape_7th, scrape_8th, scrape_9th, scrape_dc, scrape_fed, scrape_scotus,]
 	
-	if multiprocess:
-		pool = multiprocessing.Pool(processes=maxprocesses)
+	if settings.multiprocess:
+		pool = multiprocessing.Pool(processes=settings.maxprocesses)
 	
 	for scrape in scrapes:
-		if multiprocess:
+		if settings.multiprocess:
 			pool.apply_async(scrape, args=())
 		else:
 			scrape()
 			
-	if multiprocess:
+	if settings.multiprocess:
 		pool.close()
 		pool.join()
 	

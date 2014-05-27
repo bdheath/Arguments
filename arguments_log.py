@@ -1,23 +1,22 @@
 import re
 import datetime
 
-class argumentLog:
+from argument_settings import argumentSettings
+settings = argumentSettings
 
-	# FORMAT FOR LOG FILE
-	# Message Type (error, status, etc.)
-	# Date/time
-	# Error msg
+
+class argumentLog:
 
 	_logfile = ''
 	
-	def __init__(self, logfile = 'argument-scrape.log' ):
+	def __init__(self, logfile = settings.logfile ):
 		self._logfile = logfile
 		return
 	
 	def _formatLog(self, type, msg):
 		time = str(datetime.datetime.now())
 		msg = re.sub(r'[\n\r]', ' ', msg)
-		return type + '\t' + time + '\t' + msg + '\n'
+		return type + '\t' + time + '\t' + msg + '\r\n'
 	
 	def log(self, type, msg):
 		logfile = open(self._logfile, 'a')
