@@ -9,10 +9,10 @@ I use this as the data collection routine for http://bradheath.org/arguments.
 What Arguments does NOT do
 ==========================
 
-Arguments does NOT download or store the actual recordings, because doing that would produce hundreds of gigabytes of audio data. 
+Arguments does NOT download or store the actual recordings (though it does give you the option if you choose), because doing that would produce hundreds of gigabytes of audio data. 
 
 Use
 ===
-Pay attention to the #SETTINGS block at the top of the script, which is where you configure your database settings, determine whether the script should multiprocess, and decide where the results are stored. 
+Before you use these scripts, you'll need to configure '''arguments_settings.py'''. This file is where Arguments learns how to access your MySQL server, where it should keep the results, where it can create temporary files, where it can push public media files, whether the script should run using multiple threads, etc.
 
 Arguments will automatically create MySQL tables to store the data if they do not already exist. 
