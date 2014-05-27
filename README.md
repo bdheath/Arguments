@@ -13,6 +13,6 @@ Arguments does NOT download or store the actual recordings (though it does give 
 
 Use
 ===
-Before you use these scripts, you'll need to configure '''arguments_settings.py'''. This file is where Arguments learns how to access your MySQL server, where it should keep the results, where it can create temporary files, where it can push public media files, whether the script should run using multiple threads, etc.
+Before you use these scripts, you'll need to configure **arguments_settings.py**. This file is where Arguments learns how to access your MySQL server, where it should keep the results, where it can create temporary files, where it can push public media files, whether the script should run using multiple threads, etc.
 
 Arguments will automatically create MySQL tables to store the data if they do not already exist. 
