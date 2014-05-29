@@ -44,6 +44,9 @@ class argument:
 	_media_url = ''
 	_media_type = ''
 	_media_size = 0
+	_original_media_type = ''
+	_original_media_size = 0
+	_original_media_url = ''
 	_counsel = ''
 	_issues = ''
 	_argued = ''
@@ -60,6 +63,9 @@ class argument:
 		self._media_url = media_url
 		self._media_type = media_type
 		self._media_size = media_size
+		self._original_media_type = media_type
+		self._original_media_url = media_url
+		self._original_media_size = media_size
 		self._counsel = counsel
 		self._issues = issues
 		self._judges = judges
@@ -80,6 +86,12 @@ class argument:
 		else:
 			return True
 
+	def convertAttempt(self):
+		db.execute(""" UPDATE """ + settings.dbname + """.""" + settings.dbtable + """
+			SET convert_attempts = convert_attempts + 1 WHERE uid = %s """,
+			(self._uid, ))
+		return
+			
 	def updateMediaUrl(self, newUrl):
 		self._media_url = newUrl
 		self._media_type = newUrl[-3:].lower()
@@ -96,6 +108,8 @@ class argument:
 		self._court_id = h['court_id']
 		self._media_url = h['media_url']
 		self._media_type = h['media_type']
+		self._original_media_url = h['original_media_url']
+		self._original_media_type = h['original_media_type']
 		
 	def write(self):
 		if self._court_id == 0:
@@ -109,13 +123,18 @@ class argument:
 			u = argumentUtils()
 			if self._media_size == 0:
 				self._media_size = u.getRemoteSize(self._media_url)
+			print '   - NEW: ' + self._caption
 			db.execute(""" REPLACE INTO """ + settings.dbname + """.""" + settings.dbtable + """
-					(uid, docket_no, caption, case_url, media_url, media_type, media_size, counsel, issues, judges, argued, duration, court_id, added) 
-					VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()) """,
+					(uid, docket_no, caption, case_url, media_url, media_type, media_size, counsel, issues, judges, argued, duration, court_id, added,
+					original_media_type, original_media_size, original_media_url) 
+					VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(),
+					%s, %s, %s) """,
 					(self._uid, self._docket_no, self._caption, self._case_url,
 					self._media_url, self._media_type, self._media_size, 
 					self._counsel, self._issues, self._judges, self._argued,
-					self._duration, self._court_id, ))
+					self._duration, self._court_id, 
+					self._original_media_type, self._original_media_size,
+					self._original_media_url, ))
 	
 	def checkDB(self):
 		if str(type(db)) == "<class 'MySQLdb.cursors.DictCursor'>":
@@ -131,7 +150,9 @@ class argument:
 							caption VARCHAR(255),				
 							case_url VARCHAR(255),
 							media_url VARCHAR(255),
-							media_type VARCHAR(255),
+							media_type VARCHAR(10),
+							original_media_url VARCHAR(255),
+							original_media_type VARCHAR(10),
 							media_size DOUBLE,
 							counsel VARCHAR(255),
 							issues VARCHAR(255),
@@ -147,6 +168,9 @@ class argument:
 							KEY court_id_added_idx(court_id,added),
 							KEY duration_idx(duration),
 							KEY caption_idx(caption),
+							KEY media_type_idx(media_type),
+							KEY argued_idx(argued),
+							KEY argued_court_id_idx(argued, court_id),
 							FULLTEXT KEY caption_ftidx(caption),
 							FULLTEXT KEY issues_ftidx(issues),
 							FULLTEXT KEY counsel_ftidx(counsel),
@@ -191,16 +215,18 @@ class argumentUtils:
 	def convertMostRecent(self):
 		db.execute(""" SELECT uid, court_id, media_url FROM """ + settings.dbname + """.""" + settings.dbtable + """
 					WHERE media_type <> 'mp3' 
+					AND convert_attempts <= 5
 					AND argued >= DATE_ADD(CURRENT_DATE(), INTERVAL -180 DAY)
 					ORDER BY argued DESC, modified DESC LIMIT %s""", 
 					(settings.convertHowmany,))
 		h = db.fetchall()
 		if len(h) > 0:
 			for case in h:
+				arg = argument()
+				arg.load(case['uid'])
+				arg.convertAttempt()
 				newurl = self.convertFile(case['media_url'], self.localFileName(case['media_url'], prefix=case['court_id']))
 				if newurl != '':
-					arg = argument()
-					arg.load(case['uid'])
 					arg.updateMediaUrl(newurl)
 	
 	def convertDate(self, date, format):
@@ -265,8 +291,8 @@ class argumentUtils:
 			if format != 'mp3':
 				if utils.downloadFile(url, localTempFile):
 					if settings.FFMpegLocation != '':			
-						AudioSegment.ffmpeg = settings.FFMpegLocation
-					AudioSegment.from_file(localTempFile).export(localMp3File, format='mp3')
+						AudioSegment.converter = settings.FFMpegLocation
+					AudioSegment.from_file(localTempFile).export(localMp3File, format='mp3', bitrate='96k')
 					# THEN add an updated media URL and media type
 					# THEN add a cleanup routine to delete copies that are not in top x00
 					# THEN add a routine to do this update for already-stored media
