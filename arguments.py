@@ -680,7 +680,7 @@ def scrape_fed():
 			media_type = media_url[-3:].lower()
 			docket_no = re.search(DESC, item.description).group(1)
 			caption = item.title
-			argued = item.published
+			argued = utils.convertDate(item.published,'rss')
 			if utils.checkValidMediaUrl(media_url):
 				arg = argument( media_url = media_url, court_id = court_id, 
 					media_type = media_type, docket_no = docket_no, caption = caption,
