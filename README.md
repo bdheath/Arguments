@@ -11,6 +11,15 @@ What Arguments does NOT do
 
 Arguments does NOT download or store the actual recordings (though it does give you the option if you choose), because doing that would produce hundreds of gigabytes of audio data. 
 
+Requirements
+============
+
+Arguments uses:
+* MySQLdb
+* BeautifulSoup4
+* feedparser
+* pydub to handle optional media conversion (which also requires an installation of FFMpeg)
+
 Use
 ===
 Before you use these scripts, you'll need to configure **arguments_settings.py**. This file is where Arguments learns how to access your MySQL server, where it should keep the results, where it can create temporary files, where it can push public media files, whether the script should run using multiple threads, etc.
