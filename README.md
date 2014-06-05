@@ -6,10 +6,10 @@ Arguments is a Python script for scraping and storing oral argument metadata fro
 
 I use this as the data collection routine for http://bradheath.org/arguments. 
 
-What Arguments does NOT do
-==========================
+What Arguments CAN do (but doesn't on my site)
+==============================================
 
-Arguments does NOT download or store the actual recordings (though it does give you the option if you choose), because doing that would produce hundreds of gigabytes of audio data. 
+A few courts (the Third and Ninth Circuits; sometimes the Fifth Circuit, too) post their argument recordings in a WMA format that doesn't play well with most browsers, or with most Javascript-based media players. That's not much help if your use case is to play the files in a browser. So Arguments includes a mode that will automatically download those recordings and conver them to MP3s using pydub and FFMpeg. Be warned, though, the file sizes can add up quickly. And the conversions are killer for anybody on a shared hosting platform.
 
 Requirements
 ============
