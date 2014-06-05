@@ -35,3 +35,11 @@ class argumentSettings:
 	
 	# SETTINGS FOR LOGFILE
 	logfile = 'arguments.log'
+	
+	# SETTINGS FOR SOCIAL
+	tweetnew = False
+	twitter_consumer_key = dbinfo.twitter_consumer_key
+	twitter_consumer_secret = dbinfo.twitter_consumer_secret
+	twitter_access_token_key = dbinfo.twitter_access_token_key
+	twitter_access_token_secret = dbinfo.twitter_access_token_secret
+	

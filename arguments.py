@@ -34,7 +34,25 @@ log = argumentLog()
 if settings.FFMpegLocation != '':
 	AudioSegment.ffmpeg = settings.FFMpegLocation
 
+class court:
 
+	court_id = ''
+	short_name = ''
+	bluebook_name = ''
+	proper_name = ''
+	settings = ''
+	
+	def __init__(self, id):
+		settings = argumentSettings()
+		db.execute(""" SELECT * FROM """ + settings.dbname + """.""" + settings.dbtable_courts + """ 
+						WHERE court_id = %s """, (id,))
+		h = db.fetchone()
+		self.court_id = id
+		self.short_name = h['short_name']
+		self.bluebook_name = h['bluebook_name']
+		self.proper_name = h['proper_name']
+		return
+		
 class argument:
 
 	_uid = ''
@@ -118,6 +136,8 @@ class argument:
 			if settings.downloadandconvert == True:
 				filename = utils.localFileName(prefix=self._court_id, url=self._media_url)
 				f = utils.convertFile(self._media_url, filename)
+			if settings.tweetnew:
+				share.tweet(self)
 			if self._media_type == '':
 				self._media_type = self._media_url[-3:].lower()
 			u = argumentUtils()
@@ -153,6 +173,7 @@ class argument:
 							media_type VARCHAR(10),
 							original_media_url VARCHAR(255),
 							original_media_type VARCHAR(10),
+							original_media_size DOUBLE,
 							media_size DOUBLE,
 							counsel VARCHAR(255),
 							issues VARCHAR(255),
@@ -210,6 +231,43 @@ class argument:
 				db.execute(sql)
 		return
 
+class argumentShare:
+	
+	twitterAPI = ''
+	settings = ''
+	
+	def __init__(self):
+		import twitter
+		settings = argumentSettings()
+		
+		if settings.tweetnew:
+			self.twitterAPI = twitter.Api(
+				consumer_key = settings.twitter_consumer_key,
+				consumer_secret = settings.twitter_consumer_secret,
+				access_token_key = settings.twitter_access_token_key,
+				access_token_secret = settings.twitter_access_token_secret
+			)		
+		return
+		
+	def tweet(self, arg):
+		c = court(arg._court_id)
+		msg = ''
+		caption = arg._caption
+		if len(arg._caption) > 60:
+			caption = arg._caption[:60] + '...'
+		if arg._argued == parse(time.strftime("%x")):
+			
+			msg = 'Today: Arguments in ' + caption + ', ' + c.bluebook_name + ' ' + arg._media_url
+		else: 
+			msg = 'Just Added: ' + c.bluebook_name + ', ' + caption + ' ' + arg._media_url
+		self.twitterAPI.PostUpdate(msg)
+		
+		return
+	
+	def fb(self, arg):
+		return
+	
+		
 class argumentUtils:
 
 	def convertMostRecent(self):
@@ -694,6 +752,7 @@ def scrape_fed():
 	return
 	
 utils = argumentUtils()
+share = argumentShare()
 	
 if __name__ == '__main__':
 	log.log('status','Job started')
