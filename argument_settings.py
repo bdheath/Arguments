@@ -2,10 +2,13 @@ import sys
 
 class argumentSettings: 
 
-	# SETTINGS FOR DATABASE ACCESS
-	# MINE ARE IMPORTED FROM AN INTERNAL FILE (IN ROOT)
+	# Settings for database access and social media (anything that requires a password or token)
+	# are stored in a separate file (dbinfo). If you don't want to create your own dbinfo
+	# class to hold those values, just specify them below. 
 	sys.path.append('/')
 	from dbaccess import dbinfo
+	
+	# DATABASE SETTINGS
 	dbhost = dbinfo.dbhost
 	dbuser = dbinfo.dbuser
 	dbpass = dbinfo.dbpass
