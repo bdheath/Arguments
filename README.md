@@ -6,6 +6,8 @@ Arguments is a Python script for scraping and storing oral argument metadata fro
 
 I use this as the data collection routine for http://bradheath.org/arguments. 
 
+Arguments can also share new entries to social media. My implementation posts every new recording to http://twitter.com/oralarguments.
+
 What Arguments CAN do (but doesn't on my site)
 ==============================================
 
