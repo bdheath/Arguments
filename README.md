@@ -12,6 +12,7 @@ The scrape follows three basic steps:
 
 * First, it scrapes the court's website or RSS feed and extracts basic metadata from the argument (the docket number, case caption, date argued, etc), then standardizes the data. 
 * Second, it verifies that each scraped argument links to a valid media file -- we don't want 404 errors.
+* Second and a half, if you choose, it downloads any media files that aren't already MP3s, converts them and posts them to a location in your http root.
 * Third, it posts the argument. A summary optionally goes to social media; another gets stored in a MySQL table.
 
 What Arguments CAN do
