@@ -1,7 +1,7 @@
 import re
 import datetime
 
-from argument_settings import argumentSettings
+from arguments_settings import argumentSettings
 settings = argumentSettings
 
 

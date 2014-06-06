@@ -1,35 +1,39 @@
 # ORAL ARGUMENT SCRAPER
 # brad.heath@gmail.com, @bradheath
 # Script to scrape and store metadata on U.S. Court of Appeals oral arguments
-# Scrapes 1st, 3rd, 4th, 5th, 7th, 8th, 9th, D.C. and Fed. Circuits and SCOTUS
+# Scrapes 1st, 3rd, 4th, 5th, 6th, 7th, 8th, 9th, D.C. and Fed. Circuits and SCOTUS
+# Capable of multithreading scrapes, 
 #
 # TODO
-# - Update argument class so new/updated cases can be shared, noticed upon create
-#   Plug this to platform-specific APIs
 # - Enhance logging
 # - Attempt to standardize/modularize more of the scrape code
 
+
 import sys
-from dateutil.parser import parse
 import time
 import datetime
 import urllib2
 from bs4 import BeautifulSoup
+from dateutil.parser import parse
+import os
 import MySQLdb
 import re
 import feedparser
 import multiprocessing
+
+# Import my libraries
 from arguments_log import argumentLog
-from pydub import AudioSegment
-import os
+from arguments_settings import argumentSettings
 
-# IMPORT dbaccess, which has default MySQL connection settings
-from argument_settings import argumentSettings
+# Set up required connections and classes
 settings = argumentSettings()
-
-
-db = MySQLdb.connect(settings.dbhost, settings.dbuser, settings.dbpass, settings.dbname, charset = 'UTF8').cursor(MySQLdb.cursors.DictCursor)
 log = argumentLog()
+db = MySQLdb.connect(settings.dbhost, settings.dbuser, settings.dbpass, settings.dbname, charset = 'UTF8').cursor(MySQLdb.cursors.DictCursor)
+
+# Import optional dependencies
+if settings.downloadandconvert:
+	from pydub import AudioSegment
+
 
 if settings.FFMpegLocation != '':
 	AudioSegment.ffmpeg = settings.FFMpegLocation
@@ -253,15 +257,17 @@ class argumentShare:
 		c = court(arg._court_id)
 		msg = ''
 		caption = arg._caption
-		if len(arg._caption) > 60:
-			caption = arg._caption[:60] + '...'
-		if arg._argued == parse(time.strftime("%x")):
-			
-			msg = 'Today: Arguments in ' + caption + ', ' + c.bluebook_name + ' ' + arg._media_url
+		yesterday = date.today() - datetime.timedelta(1)
+		if len(arg._caption) > 57:
+			caption = arg._caption[:57] + '...'
+		if arg._argued == parse(time.strftime("%x")):	
+			msg = 'NEW: Today\'s argument in ' + caption + ', ' + c.bluebook_name + ' ' + arg._media_url
+		elif(arg._argued == parse(yesterday.strftime("%x"))):
+			msg = "Yesterday's " + c.bluebook_name + " argument in " + caption + ": " + arg._media_url
 		else: 
 			msg = 'Just Added: ' + c.bluebook_name + ', ' + caption + ' ' + arg._media_url
 		self.twitterAPI.PostUpdate(msg)
-		
+		log.log('share','TWEET: ' + msg)
 		return
 	
 	def fb(self, arg):
