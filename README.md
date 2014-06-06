@@ -14,8 +14,8 @@ The scrape follows three basic steps:
 * Second, it verifies that each scraped argument links to a valid media file -- we don't want 404 errors.
 * Third, it posts the argument. A summary optionally goes to social media; another gets stored in a MySQL table.
 
-What Arguments CAN do (but doesn't on my site)
-==============================================
+What Arguments CAN do
+=============================================
 
 A few courts (the Third and Ninth Circuits; sometimes the Fifth Circuit, too) post their argument recordings in a WMA format that doesn't play well with most browsers, or with most Javascript-based media players. That's not much help if your use case is to play the files in a browser. So Arguments includes a mode that will automatically download those recordings and conver them to MP3s using pydub and FFMpeg. Be warned, though, the file sizes can add up quickly. And the conversions are killer for anybody on a shared hosting platform.
 
