@@ -26,12 +26,15 @@ What Arguments will do next
 
 Requirements
 ============
+The basic stuff
+* Access to a MySQL server. 
 
-Arguments uses:
+The Python dependencies
 * MySQLdb
 * BeautifulSoup4
 * feedparser
-* pydub to handle optional media conversion (which also requires an installation of FFMpeg)
+* **optional**: pydub to handle optional media conversion (which also requires an installation of FFMpeg)
+* **optional**: python-twitter to handle automatic Twitter posts
 
 Use
 ===
