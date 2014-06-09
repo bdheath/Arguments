@@ -13,6 +13,7 @@ import sys
 import time
 import datetime
 import urllib2
+from datetime import date
 from bs4 import BeautifulSoup
 from dateutil.parser import parse
 import os
@@ -258,16 +259,19 @@ class argumentShare:
 		msg = ''
 		caption = arg._caption
 		yesterday = date.today() - datetime.timedelta(1)
+		
+		# Customize a message based on the day of the week
 		if len(arg._caption) > 57:
 			caption = arg._caption[:57] + '...'
 		if arg._argued == parse(time.strftime("%x")):	
 			msg = 'NEW: Today\'s argument in ' + caption + ', ' + c.bluebook_name + ' ' + arg._media_url
 		elif(arg._argued == parse(yesterday.strftime("%x"))):
 			msg = "Yesterday's " + c.bluebook_name + " argument in " + caption + ": " + arg._media_url
-		else: 
-			msg = 'Just Added: ' + c.bluebook_name + ', ' + caption + ' ' + arg._media_url
-		self.twitterAPI.PostUpdate(msg)
-		log.log('share','TWEET: ' + msg)
+		
+		# Don't share things that are older than yesterday
+		if msg != '':
+			self.twitterAPI.PostUpdate(msg)
+			log.log('share','TWEET: ' + msg)
 		return
 	
 	def fb(self, arg):
