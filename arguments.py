@@ -39,6 +39,8 @@ if settings.downloadandconvert:
 if settings.FFMpegLocation != '':
 	AudioSegment.ffmpeg = settings.FFMpegLocation
 
+# A simple class that describes a court from the database
+# Retrieved by the court's unique id
 class court:
 
 	court_id = ''
@@ -58,6 +60,9 @@ class court:
 		self.proper_name = h['proper_name']
 		return
 		
+
+# A class that describes each oral argument in the index
+# Methods for reading and writing arguments from the database
 class argument:
 
 	_uid = ''
@@ -236,6 +241,8 @@ class argument:
 				db.execute(sql)
 		return
 
+
+# Utilities class
 class argumentShare:
 	
 	twitterAPI = ''
@@ -759,6 +766,9 @@ def scrape_fed():
 		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)
 	
+	return
+	
+def scrape_st_ohio():
 	return
 	
 utils = argumentUtils()
