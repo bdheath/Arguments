@@ -366,6 +366,7 @@ class argumentShare:
 		msg = ''
 		caption = arg._caption
 		yesterday = date.today() - datetime.timedelta(1)
+		daybefore = date.today() - datetime.timedelta(1)
 		
 		# Customize a message based on the day of the week
 		if len(arg._caption) > 57:
@@ -374,8 +375,10 @@ class argumentShare:
 			msg = 'NEW: Today\'s argument in ' + caption + ', ' + c.bluebook_name + ' ' + arg._media_url
 		elif(arg._argued == parse(yesterday.strftime("%x"))):
 			msg = "Yesterday's " + c.bluebook_name + " argument in " + caption + ": " + arg._media_url
-		
-		# Don't share things that are older than yesterday
+		elif(arg._argued == parse(daybefore.strftime("%x"))):
+			msg = c.bluebook_name + " argument in " + caption + ": " + arg._media_url
+			
+		# Don't share things that are older than the day before yesterday
 		if msg != '':
 			self.twitterAPI.PostUpdate(msg)
 			log.log('share','TWEET: ' + msg)
@@ -587,7 +590,7 @@ def scrape_3rd():
 	court_id = utils.getCourt("3d Cir.")
 	URL = 'http://www2.ca3.uscourts.gov/oralargument/OralArguments.xml'
 	TITLEPARSE = re.compile('^([\d-]{4,})', re.IGNORECASE)
-	MEDIAMEAT = re.compile('audio/[\d\-\&]{4,}(.*?).wma', re.IGNORECASE);
+	MEDIAMEAT = re.compile('audio/[\d\-\&]{4,}(.*?)\.(wma|mp3)', re.IGNORECASE);
 	try:
 		feed = feedparser.parse(URL)
 		for item in feed.entries:
@@ -979,8 +982,6 @@ if __name__ == '__main__':
 	# Now execute the scrapes
 	scrapes = [scrape_1st, scrape_3rd, scrape_4th, scrape_5th, scrape_6th,
 		scrape_7th, scrape_8th, scrape_9th, scrape_dc, scrape_fed, scrape_scotus,]
-
-	scrapes = [scrape_calendar_9th, scrape_9th, ]
 	
 	if settings.multiprocess:
 		pool = multiprocessing.Pool(processes=settings.maxprocesses)
