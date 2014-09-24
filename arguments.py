@@ -198,32 +198,37 @@ class argument:
 		if self._uid == 0:
 			print "  # EXCEPTION: You cannot update a case without a valid UID"
 		else:
-			db.execute(""" UPDATE """ + settings.dbname + """.""" + settings.dbtable + """
-				SET docket_no = %s,
-					caption = %s,
-					case_url = %s,
-					media_url = %s,
-					media_type = %s, 
-					media_size = %s,
-					counsel = %s,
-					issues = %s,
-					judges = %s,
-					argued = %s, 
-					duration = %s,
-					court_id = %s,
-					added = %s,
-					original_media_type = %s,
-					original_media_size = %s,
-					original_media_url = %s,
-					status = %s,
-					date_scheduled = %s
-				WHERE uid = %s """,
-				(self._docket_no, self._caption, self._case_url, self._media_url,
-				self._media_type, self._media_size, self._counsel, self._issues,
-				self._judges, self._argued, self._duration, self._court_id,
-				self._added, self._original_media_type, self._original_media_size,
-				self._original_media_url, self._status, self._date_scheduled,
-				self._uid, ))
+			try:
+				db.execute(""" UPDATE """ + settings.dbname + """.""" + settings.dbtable + """
+					SET docket_no = %s,
+						caption = %s,
+						case_url = %s,
+						media_url = %s,
+						media_type = %s, 
+						media_size = %s,
+						counsel = %s,
+						issues = %s,
+						judges = %s,
+						argued = %s, 
+						duration = %s,
+						court_id = %s,
+						added = %s,
+						original_media_type = %s,
+						original_media_size = %s,
+						original_media_url = %s,
+						status = %s,
+						date_scheduled = %s
+					WHERE uid = %s """,
+					(self._docket_no, self._caption, self._case_url, self._media_url,
+					self._media_type, self._media_size, self._counsel, self._issues,
+					self._judges, self._argued, self._duration, self._court_id,
+					self._added, self._original_media_type, self._original_media_size,
+					self._original_media_url, self._status, self._date_scheduled,
+					self._uid, ))
+			except:
+				sql = db._last_executed
+				err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+				log.log('ERROR (DB)', err + ' in ' + sql)
 		return
 	
 	def write(self):
@@ -246,7 +251,8 @@ class argument:
 					self._media_size = u.getRemoteSize(self._media_url)
 				
 			print '   - NEW: ' + self._caption
-			db.execute(""" REPLACE INTO """ + settings.dbname + """.""" + settings.dbtable + """
+			try:
+				db.execute(""" REPLACE INTO """ + settings.dbname + """.""" + settings.dbtable + """
 					(uid, docket_no, caption, case_url, media_url, media_type, media_size, counsel, issues, judges, argued, duration, court_id, added,
 					original_media_type, original_media_size, original_media_url,
 					status, date_scheduled) 
@@ -258,6 +264,10 @@ class argument:
 					self._duration, self._court_id, 
 					self._original_media_type, self._original_media_size,
 					self._original_media_url, self._status, self._date_scheduled ))
+			except:
+				sql = db._last_executed
+				err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+				log.log('ERROR (DB)', err + ' in ' + sql)
 	
 	def checkDB(self):
 		if str(type(db)) == "<class 'MySQLdb.cursors.DictCursor'>":
@@ -811,7 +821,7 @@ def scrape_9th():
 						# See if we already have this in the database
 						# If so, load it and update
 						# If not, create
-						q = utils.query(court_id = court_id, docket_no = docket_no)
+						q = utils.query(court_id = court_id, docket_no = docket_no, status = 'scheduled' )
 						if q:
 							if len(q) == 1:
 								arg = q[0]
@@ -982,7 +992,7 @@ if __name__ == '__main__':
 	# Now execute the scrapes
 	scrapes = [scrape_1st, scrape_3rd, scrape_4th, scrape_5th, scrape_6th,
 		scrape_7th, scrape_8th, scrape_9th, scrape_dc, scrape_fed, scrape_scotus,]
-	
+
 	if settings.multiprocess:
 		pool = multiprocessing.Pool(processes=settings.maxprocesses)
 	
