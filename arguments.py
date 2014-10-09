@@ -379,6 +379,11 @@ class argumentShare:
 		daybefore = date.today() - datetime.timedelta(1)
 		
 		# Customize a message based on the day of the week
+#		print "Argued: "
+#		print arg._argued
+#		print "Today:" 
+#		print parse(time.strftime("%x"))
+		
 		if len(arg._caption) > 57:
 			caption = arg._caption[:57] + '...'
 		if arg._argued == parse(time.strftime("%x")):	
@@ -454,7 +459,9 @@ class argumentUtils:
 	
 	def convertDate(self, date, format):
 		if format == 'rss':
-			d = parse(date)
+			TS = re.compile('\d\d:\d\d:\d\d')
+			date = re.sub(TS, '00:00:00', date)
+			d = parse(date,ignoretz=True)
 			return d
 		if format == 'mdy':
 			d = parse(date)
@@ -592,7 +599,7 @@ def scrape_1st():
 				if not arg.exists():
 					arg.write()
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_1st(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)
 		
 def scrape_3rd():
@@ -622,7 +629,7 @@ def scrape_3rd():
 					if not arg.exists():
 						arg.write()
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_3rd(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)	
 	return
 
@@ -651,7 +658,7 @@ def scrape_4th():
 					if not arg.exists():
 						arg.write()
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_4th(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)	
 	return
 
@@ -675,7 +682,7 @@ def scrape_5th():
 				if not arg.exists():
 					arg.write()		
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_5th(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)
 	return
 					
@@ -727,7 +734,7 @@ def scrape_6th():
 										arg.write()
 					i += 1
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_6th(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)
 	return
 				
@@ -760,7 +767,7 @@ def scrape_7th():
 							arg.write()
 			i += 1
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_7th(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)	
 	return
 
@@ -785,7 +792,7 @@ def scrape_8th():
 				if not arg.exists():
 					arg.write()
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_8th(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)					
 	return
 	
@@ -858,12 +865,13 @@ def scrape_dc():
 				media_type = item.link[-3:].lower()
 				#file = getFileDetails(item.link)
 				argued = utils.convertDate(item.published, 'rss')
+				print ' checking ' + caption
 				arg = argument(docket_no = docket_no, caption = caption, media_url = media_url,
 					argued = argued, court_id = court_id)
 				if not arg.exists():
 					arg.write()
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_dc(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)
 	
 	return
@@ -927,7 +935,7 @@ def scrape_fed():
 				if not arg.exists():
 					arg.write()
 	except:
-		err = str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
+		err = 'In scrape_fed(): ' + str(sys.exc_info()[0]) + ' -> ' + str(sys.exc_info()[1])
 		log.log('ERROR', err)
 	
 	return
@@ -993,6 +1001,7 @@ if __name__ == '__main__':
 	scrapes = [scrape_1st, scrape_3rd, scrape_4th, scrape_5th, scrape_6th,
 		scrape_7th, scrape_8th, scrape_9th, scrape_dc, scrape_fed, scrape_scotus,]
 
+		
 	if settings.multiprocess:
 		pool = multiprocessing.Pool(processes=settings.maxprocesses)
 	
