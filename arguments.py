@@ -879,7 +879,7 @@ def scrape_dc():
 def scrape_scotus():
 	print '-> Updating Sup. Ct. data'
 	court_id = utils.getCourt('Sup. Ct.')
-	URL = 'http://www.supremecourt.gov/oral_arguments/argument_audio.aspx'
+	URL = 'http://www.supremecourt.gov/oral_arguments/argument_audio/'
 	DTARG = re.compile('Date Argued', re.IGNORECASE)
 	TITLEPARSE = re.compile("([\d-]{3,})\. (.*?)$", re.IGNORECASE)
 	MEDIABASE = 'http://www.supremecourt.gov/media/audio/mp3files/'
@@ -892,12 +892,13 @@ def scrape_scotus():
 			# Parse a results table
 			i = 0
 			for tr in table.find_all('tr'):
-				if i > 1:
+				if i > 0:
 					td = tr.find_all('td')
 					if not re.search(DTARG, td[1].text):
 						argued = utils.convertDate(td[1].text.strip(), 'mdy')
 						if re.search(TITLEPARSE, td[0].text):
 							caption = re.search(TITLEPARSE, td[0].text).group(2).encode('ascii','ignore')
+							print ' Checking ' + caption;
 							docket_no = re.search(TITLEPARSE, td[0].text).group(1).encode('ascii','ignore')
 							media_type = 'mp3'
 							media_url = MEDIABASE + docket_no + '.mp3'
@@ -1001,7 +1002,6 @@ if __name__ == '__main__':
 	scrapes = [scrape_1st, scrape_3rd, scrape_4th, scrape_5th, scrape_6th,
 		scrape_7th, scrape_8th, scrape_9th, scrape_dc, scrape_fed, scrape_scotus,]
 
-		
 	if settings.multiprocess:
 		pool = multiprocessing.Pool(processes=settings.maxprocesses)
 	
