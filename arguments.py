@@ -386,12 +386,17 @@ class argumentShare:
 		
 		if len(arg._caption) > 57:
 			caption = arg._caption[:57] + '...'
-		if arg._argued == parse(time.strftime("%x")):	
-			msg = 'NEW: Today\'s argument in ' + caption + ', ' + c.bluebook_name + ' ' + arg._media_url
-		elif(arg._argued == parse(yesterday.strftime("%x"))):
-			msg = "Yesterday's " + c.bluebook_name + " argument in " + caption + ": " + arg._media_url
-		elif(arg._argued == parse(daybefore.strftime("%x"))):
-			msg = c.bluebook_name + " argument in " + caption + ": " + arg._media_url
+		
+		# Make a special exception for the Supreme Court
+		if arg._court_id == utils.getCourt('Sup. Ct.'):
+			msg = 'NEW: Supreme Court argument in ' + caption + ': ' + arg._media_url + ' #SCOTUS'
+		else:
+			if arg._argued == parse(time.strftime("%x")):	
+				msg = 'NEW: Today\'s argument in ' + caption + ', ' + c.bluebook_name + ' ' + arg._media_url
+			elif(arg._argued == parse(yesterday.strftime("%x"))):
+				msg = "Yesterday's " + c.bluebook_name + " argument in " + caption + ": " + arg._media_url
+			elif(arg._argued == parse(daybefore.strftime("%x"))):
+				msg = c.bluebook_name + " argument in " + caption + ": " + arg._media_url
 			
 		# Don't share things that are older than the day before yesterday
 		if msg != '':
@@ -865,7 +870,6 @@ def scrape_dc():
 				media_type = item.link[-3:].lower()
 				#file = getFileDetails(item.link)
 				argued = utils.convertDate(item.published, 'rss')
-				print ' checking ' + caption
 				arg = argument(docket_no = docket_no, caption = caption, media_url = media_url,
 					argued = argued, court_id = court_id)
 				if not arg.exists():
@@ -898,7 +902,7 @@ def scrape_scotus():
 						argued = utils.convertDate(td[1].text.strip(), 'mdy')
 						if re.search(TITLEPARSE, td[0].text):
 							caption = re.search(TITLEPARSE, td[0].text).group(2).encode('ascii','ignore')
-							print ' Checking ' + caption;
+#							print ' Checking ' + caption;
 							docket_no = re.search(TITLEPARSE, td[0].text).group(1).encode('ascii','ignore')
 							media_type = 'mp3'
 							media_url = MEDIABASE + docket_no + '.mp3'
