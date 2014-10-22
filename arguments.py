@@ -389,6 +389,8 @@ class argumentShare:
 		
 		# Make a special exception for the Supreme Court
 		if arg._court_id == utils.getCourt('Sup. Ct.'):
+			if len(arg._caption) > 48
+				caption = arg._caption[:48]
 			msg = 'NEW: Supreme Court argument in ' + caption + ': ' + arg._media_url + ' #SCOTUS'
 		else:
 			if arg._argued == parse(time.strftime("%x")):	
