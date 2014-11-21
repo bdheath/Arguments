@@ -389,7 +389,7 @@ class argumentShare:
 		
 		# Make a special exception for the Supreme Court
 		if arg._court_id == utils.getCourt('Sup. Ct.'):
-			if len(arg._caption) > 48
+			if len(arg._caption) > 48:
 				caption = arg._caption[:48]
 			msg = 'NEW: Supreme Court argument in ' + caption + ': ' + arg._media_url + ' #SCOTUS'
 		else:
@@ -828,8 +828,8 @@ def scrape_9th():
 						+ dt.group(3) + '/' \
 						+ dt.group(1) + '/' \
 						+ dt.group(2) + '/' \
-						+ docket_no + '.wma'
-					media_type = 'wma'
+						+ docket_no + '.mp3'
+					media_type = 'mp3'
 					if utils.checkValidMediaUrl(media_url):
 					
 						# See if we already have this in the database
